@@ -80,9 +80,8 @@ export class AIAgent {
 
 I help you create focused discussion groups instantly. Here's how to get started:
 
-🎯 **Create a Group**: "@spinny create [GroupName]"
-👥 **Add Members**: I'll help you add people with quick actions
-📋 **Manage Groups**: Get info and help with group administration
+🎯 Create a Group: "@spinny create [GroupName]"
+📋 Manage Groups: Get info and help with group administration
 
 Just mention me with @spinny and tell me what group you'd like to create!`;
       }
@@ -92,33 +91,33 @@ Just mention me with @spinny and tell me what group you'd like to create!`;
 
 ### Available Commands:
 
-**Group Creation:**
-- \`@spinny create [GroupName]\` - Create a new group instantly
-- \`@spinny make [GroupName]\` - Alternative syntax for group creation
-- \`@spinny new [GroupName]\` - Another way to create groups
+Group Creation:
+- @spinny create [GroupName] - Create a new group instantly
+- @spinny make [GroupName] - Alternative syntax for group creation
+- @spinny new [GroupName] - Another way to create groups
 
-**Private Groups (Groups Only):**
-- \`@spinny create private [GroupName]\` - Create a private group (no quick actions)
-- \`@spinny make private [GroupName]\` - Alternative syntax for private groups
-- \`@spinny new private [GroupName]\` - Another way to create private groups
-- \`@spinny create private [GroupName] @username1 @username2\` - Create private group and add users immediately
+Private Groups (Groups Only):
+- @spinny create private [GroupName] - Create a private group (no quick actions)
+- @spinny make private [GroupName] - Alternative syntax for private groups
+- @spinny new private [GroupName] - Another way to create private groups
+- @spinny create private [GroupName] @username1 @username2 - Create private group and add users immediately
 
-**Examples:**
+Examples:
 - "@spinny create Project Discussion" (shows join quick actions)
 - "@spinny create private Marketing Team" (asks for @mentions to add users)
 - "@spinny create private Leadership Team @username1 @username2.eth" (creates group and adds users)
 - "@spinny make private Finance Group" (private group creation)
 
-**Note:** Use usernames, ENS domains, or wallet addresses for @mentions (e.g., @username, @username.eth, @0x1234...).
+Note: Use usernames, ENS domains, or wallet addresses for @mentions (e.g., @username, @username.eth, @0x1234...).
 
-**Note:** Private groups can only be created in group conversations, not in DMs.
+Note: Private groups can only be created in group conversations, not in DMs.
 
-### Features:
-- **Instant Group Creation** - Groups are created immediately
-- **Public Groups** - Show quick action buttons for easy joining
-- **Private Groups** - Ask for @mentions to add specific users
-- **Member Management** - Add multiple members with @mentions or quick actions
-- **Focused Discussions** - Organized, topic-specific conversations
+Features:
+- Instant Group Creation - Groups are created immediately
+- Public Groups - Show quick action buttons for easy joining
+- Private Groups - Ask for @mentions to add specific users
+- Member Management - Add multiple members with @mentions or quick actions
+- Focused Discussions - Organized, topic-specific conversations
 
 Need help with something specific? Just ask!`;
       }

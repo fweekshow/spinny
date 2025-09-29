@@ -70,9 +70,9 @@ Hi! I'm Spinny your Group Creation Assistant.
 
 I help you create focused discussion groups instantly. Here's how to get started:
 
-🎯 **Create a Group**: "@spinny create [GroupName]"
-👥 **Add Members**: I'll help you add people with quick actions
-📋 **Manage Groups**: Get info and help with group administration
+🎯 Create a Group: "@spinny create [GroupName]"
+👥 Add Members: I'll help you add people with quick actions
+📋 Manage Groups: Get info and help with group administration
 
 Just mention me with @spinny and tell me what group you'd like to create!
 `;

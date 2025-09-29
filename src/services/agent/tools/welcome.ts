@@ -10,9 +10,8 @@ export const sendWelcomeMessage = new DynamicTool({
 
 I help you create focused discussion groups instantly. Here's how to get started:
 
-🎯 **Create a Group**: "@sidebar create [GroupName]"
-👥 **Add Members**: I'll help you add people with quick actions
-📋 **Manage Groups**: Get info and help with group administration
+🎯 Create a Group: "@sidebar create [GroupName]"
+📋 Manage Groups: Get info and help with group administration
 
 Just mention me with @sidebar and tell me what group you'd like to create!`;
   },
@@ -27,21 +26,21 @@ export const showHelp = new DynamicTool({
 
 ### Available Commands:
 
-**Group Creation:**
-- \`@sidebar create [GroupName]\` - Create a new group instantly
-- \`@sidebar make [GroupName]\` - Alternative syntax for group creation
-- \`@sidebar new [GroupName]\` - Another way to create groups
+Group Creation:
+- @sidebar create [GroupName] - Create a new group instantly
+- @sidebar make [GroupName] - Alternative syntax for group creation
+- @sidebar new [GroupName] - Another way to create groups
 
-**Examples:**
+Examples:
 - "@sidebar create Project Discussion"
 - "@sidebar make Marketing Team" 
 - "@sidebar new Design Review"
 
-### Features:
-- **Instant Group Creation** - Groups are created immediately
-- **Member Management** - Add multiple members with quick actions
-- **Focused Discussions** - Organized, topic-specific conversations
-- **Quick Actions** - Interactive buttons for easy group management
+Features:
+- Instant Group Creation - Groups are created immediately
+- Member Management - Add multiple members with quick actions
+- Focused Discussions - Organized, topic-specific conversations
+- Quick Actions - Interactive buttons for easy group management
 
 ### How to Use:
 1. Mention me with @sidebar in any conversation
