@@ -1,13 +1,10 @@
 import { z } from "zod";
-import { Tool } from "@langchain/core/tools";
+import { DynamicTool } from "@langchain/core/tools";
 
 // Welcome message tool
-export const sendWelcomeMessage = new Tool({
+export const sendWelcomeMessage = new DynamicTool({
   name: "SendWelcomeMessage",
   description: "Send a welcome message with quick actions to help users get started with group creation",
-  parameters: z.object({
-    // No parameters needed for welcome message
-  }),
   func: async () => {
     return `Hi! I'm Sidebar your Group Creation Assistant. 
 
@@ -22,12 +19,9 @@ Just mention me with @sidebar and tell me what group you'd like to create!`;
 });
 
 // Help tool
-export const showHelp = new Tool({
+export const showHelp = new DynamicTool({
   name: "ShowHelp",
   description: "Show help information and available commands for group creation",
-  parameters: z.object({
-    // No parameters needed for help
-  }),
   func: async () => {
     return `## Sidebar Group Creation Assistant - Help
 

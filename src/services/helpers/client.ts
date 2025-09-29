@@ -198,9 +198,8 @@ export function validateEnvironment(vars: string[]): Record<string, string> {
   }, {});
 }
 
-export async function createClient(privateKey: string, env: string) {
-  const client = await Client.create({
-    privateKey,
+export async function createClient(signer: any, env: string) {
+  const client = await Client.create(signer, {
     env: env as "local" | "dev" | "production",
   });
   

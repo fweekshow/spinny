@@ -29,7 +29,6 @@
     "@langchain/openai": "^0.6.9",
     "@xmtp/content-type-primitives": "^2.0.2",
     "@xmtp/content-type-transaction-reference": "^2.0.2",
-    "@xmtp/content-type-wallet-send-calls": "^2.0.2",
     "@xmtp/node-sdk": "^4.1.0",
     "better-sqlite3": "^11.7.0",
     "cors": "^2.8.5",

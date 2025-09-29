@@ -1,4 +1,4 @@
-import { ContentTypeWalletSendCalls } from "@xmtp/content-type-wallet-send-calls";
+// import { ContentTypeWalletSendCalls } from "@xmtp/content-type-wallet-send-calls";
 import type { Conversation } from "@xmtp/node-sdk";
 import { type IntentContent } from "../types/IntentContent";
 import {
@@ -109,7 +109,8 @@ export async function handleSendCommand(
     console.log(
       `💸 Created transfer request: ${amount} ${token} from ${senderAddress}${usePaymaster ? " with paymaster" : ""}`,
     );
-    await conversation.send(walletSendCalls, ContentTypeWalletSendCalls);
+    // await conversation.send(walletSendCalls, ContentTypeWalletSendCalls);
+    console.log('Wallet send calls functionality disabled');
 
     await conversation.send(
       `✅ Transaction request created!

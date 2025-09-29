@@ -1,4 +1,4 @@
-import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
+// import type { WalletSendCallsParams } from "@xmtp/content-type-wallet-send-calls";
 import { createPublicClient, formatUnits, http, toHex } from "viem";
 import { base, baseSepolia, mainnet, sepolia } from "viem/chains";
 
@@ -204,7 +204,7 @@ export class TokenHandler {
   /**
    * Create wallet send calls for token transfer
    */
-  createTokenTransferCalls(request: SendCallsRequest): WalletSendCallsParams {
+  createTokenTransferCalls(request: SendCallsRequest): any {
     const token = this.getTokenConfig(request.token);
     const amountInDecimals = Math.floor(
       request.amount * Math.pow(10, token.decimals),

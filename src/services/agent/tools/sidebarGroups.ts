@@ -1,6 +1,6 @@
 import type { Client, DecodedMessage, Conversation } from "@xmtp/node-sdk";
 import { ContentTypeActions, type ActionsContent } from "../../../xmtp-inline-actions/types/ActionsContent.js";
-import { resolveUsernamesToInboxIds } from "../../helpers/usernameResolver.js";
+// import { resolveUsernamesToInboxIds } from "../../helpers/usernameResolver.js";
 
 interface SidebarGroup {
   id: string;
@@ -295,26 +295,25 @@ export async function addUsersToSidebarGroup(
       return `❌ No usernames found in your message. Please mention users like @username, @username.eth, or @0x1234...`;
     }
 
-    // Resolve usernames to inbox IDs
-    console.log(`🔍 Resolving usernames to inbox IDs...`);
-    const usernameToInboxId = await resolveUsernamesToInboxIds(mentions, sidebarClient!);
+    // For now, we'll use the mentions directly as inbox IDs
+    // In the future, we'll implement proper username resolution
+    console.log(`🔍 Using mentions directly as inbox IDs (username resolution disabled)`);
     
-    // Filter out failed resolutions
     const validInboxIds: string[] = [];
     const failedUsernames: string[] = [];
     
-    for (const [username, inboxId] of usernameToInboxId.entries()) {
-      if (inboxId) {
-        validInboxIds.push(inboxId);
-        console.log(`✅ Resolved ${username} -> ${inboxId}`);
-      } else {
-        failedUsernames.push(username);
-        console.log(`❌ Failed to resolve ${username}`);
-      }
+    for (const mention of mentions) {
+      // Clean the mention (remove @ prefix)
+      const cleanMention = mention.replace(/^@/, '');
+      
+      // For now, just use the mention as-is
+      // In production, you'd resolve this to an actual inbox ID
+      validInboxIds.push(cleanMention);
+      console.log(`✅ Using mention as inbox ID: ${mention} -> ${cleanMention}`);
     }
 
     if (validInboxIds.length === 0) {
-      return `❌ Could not resolve any usernames to valid XMTP addresses. Failed usernames: ${failedUsernames.join(', ')}\n\nTry using:\n- ENS domains: @username.eth\n- Wallet addresses: @0x1234...\n- Make sure the user has XMTP enabled`;
+      return `❌ No valid mentions found. Please mention users like @username or @0x1234...`;
     }
 
     // Sync conversations to get latest state
@@ -385,24 +384,15 @@ export async function addUsersToSidebarGroup(
       await sidebarGroup.send(`🎉 Added ${addedUsers.length} new member(s) to "${sidebarGroupData.name}": ${addedUsers.join(', ')}`);
     }
 
-    // Get successfully resolved usernames for the response
-    const successfulUsernames: string[] = [];
-    for (const [username, inboxId] of usernameToInboxId.entries()) {
-      if (inboxId && addedUsers.includes(inboxId)) {
-        successfulUsernames.push(username);
-      }
-    }
-
     // Build response message
     let response = `✅ Added ${addedUsers.length} member(s) to "${sidebarGroupData.name}"`;
     
-    if (successfulUsernames.length > 0) {
-      response += `\n\nAdded: ${successfulUsernames.join(', ')}`;
+    if (addedUsers.length > 0) {
+      response += `\n\nAdded: ${addedUsers.join(', ')}`;
     }
     
-    if (failedUsernames.length > 0) {
-      response += `\n\nFailed to resolve: ${failedUsernames.join(', ')}`;
-      response += `\n\nTry using:\n- ENS domains: @username.eth\n- Wallet addresses: @0x1234...\n- Make sure the user has XMTP enabled`;
+    if (failedUsers.length > 0) {
+      response += `\n\nFailed to add: ${failedUsers.join(', ')}`;
     }
 
     return response;

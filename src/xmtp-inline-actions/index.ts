@@ -5,7 +5,6 @@ import {
   validateEnvironment,
 } from "../services/helpers/client.js";
 import { TransactionReferenceCodec } from "@xmtp/content-type-transaction-reference";
-import { WalletSendCallsCodec } from "@xmtp/content-type-wallet-send-calls";
 import { Client, type XmtpEnv } from "@xmtp/node-sdk";
 import {
   handleIntentMessage,
@@ -45,7 +44,6 @@ async function main() {
     appVersion: "example-agent/1.0.0",
     env: XMTP_ENV as XmtpEnv,
     codecs: [
-      new WalletSendCallsCodec(),
       new TransactionReferenceCodec(),
       new ActionsCodec(),
       new IntentCodec(),
