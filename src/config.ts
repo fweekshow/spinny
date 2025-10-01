@@ -16,6 +16,9 @@ export const BASE_URL = process.env.BASE_URL;
 // Neynar API Configuration
 export const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 
+// Database Configuration
+export const DATABASE_URL = process.env.DATABASE_URL;
+
 // Coinbase OnchainKit API Configuration
 export const PUBLIC_ONCHAINKIT_API_KEY = process.env.PUBLIC_ONCHAINKIT_API_KEY;
 
