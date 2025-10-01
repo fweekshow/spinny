@@ -1,6 +1,8 @@
 import type { Client, DecodedMessage, Conversation } from "@xmtp/node-sdk";
 import { ContentTypeActions, type ActionsContent } from "../../../xmtp-inline-actions/types/ActionsContent.js";
-import { resolveUsernamesToAddresses } from "../../helpers/neynarService.js";
+import { resolveUsernamesToAddresses, getUsersByAddresses } from "../../helpers/neynarService.js";
+import { getName } from '@coinbase/onchainkit/identity';
+import { base } from 'viem/chains';
 
 interface SidebarGroup {
   id: string;
@@ -97,7 +99,7 @@ export async function handleSidebarRequest(
     }
 
     // Step 5: Send welcome message to the sidebar group
-    await sidebarGroup.send(`🎯 Welcome to "${groupName}"!\n\nThis is a sidebar conversation from the main group. You are now a group admin and can manage this space for focused discussions.`);
+    await sidebarGroup.send(`Welcome to "${groupName}"!\n\nThis is a sidebar conversation from the main group. You are now a group admin and can manage this space for focused discussions.`);
 
     // Step 6: Pause briefly to ensure group is properly set up
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -105,16 +107,16 @@ export async function handleSidebarRequest(
     // Step 7: Send invitation quick actions to the group
     const invitationActions: ActionsContent = {
       id: `sidebar_invite_${sidebarGroup.id}`,
-      description: `🎯 "${groupName}" sidebar group created! Would you like to join this focused discussion?`,
+      description: `"${groupName}" sidebar group created! Would you like to join this focused discussion?`,
       actions: [
         {
           id: `grouper_join_sidebar_${sidebarGroup.id}`,
-          label: "✅ Yes, Join",
+          label: "Yes, Join",
           style: "primary"
         },
         {
           id: `grouper_decline_sidebar_${sidebarGroup.id}`,
-          label: "❌ No Thanks",
+          label: "No Thanks",
           style: "secondary"
         }
       ]
@@ -181,7 +183,7 @@ export async function createSidebarGroupInDM(
     }
 
     // Send welcome message
-    await sidebarGroup.send(`🎯 Welcome to "${groupName}"!\n\nYou created this group via DM. You're now a group admin and can manage this space for focused discussions.`);
+    await sidebarGroup.send(`Welcome to "${groupName}"!\n\nYou created this group via DM. You're now a group admin and can manage this space for focused discussions.`);
 
     return {
       groupId: sidebarGroup.id,
@@ -243,17 +245,17 @@ export async function joinSidebarGroup(
       
       if (addError.message?.includes('already') || addError.message?.includes('duplicate')) {
         console.log(`ℹ️ User was already in sidebar group`);
-        return `ℹ️ You're already in "${sidebarGroupData.name}"! Check your group conversations to find it.`;
+        return `You're already in "${sidebarGroupData.name}"! Check your group conversations to find it.`;
       } else if (addError.message?.includes('Failed to verify all installations') || addError.code === 'GenericFailure') {
         console.log(`⚠️ Installation verification failed for sidebar group - temporary XMTP network issue`);
-        return `⚠️ There's a temporary network issue preventing group access right now. 
+        return `There's a temporary network issue preventing group access right now. 
 
 Please try joining "${sidebarGroupData.name}" again in a few minutes, or contact support if the issue persists.
 
 The sidebar group is available and you can try again later!`;
       } else {
         console.log(`❌ Unknown error for sidebar group:`, addError);
-        return `❌ Failed to add you to "${sidebarGroupData.name}". Error: ${addError.message || 'Unknown error'}. Please contact support.`;
+        return `Failed to add you to "${sidebarGroupData.name}". Error: ${addError.message || 'Unknown error'}. Please contact support.`;
       }
     }
     
@@ -261,16 +263,78 @@ The sidebar group is available and you can try again later!`;
     sidebarGroupData.members.push(userInboxId);
     sidebarGroups.set(groupId, sidebarGroupData);
 
-    // Send a welcome message to help the user identify the group
-    await sidebarGroup.send(`🎉 ${userInboxId} joined the "${sidebarGroupData.name}" sidebar discussion!`);
+    // Send welcome message with username resolution (async, don't wait)
+    resolveAndSendWelcomeMessage(sidebarGroup, sidebarGroupData.name, userInboxId);
 
-    return `✅ Great! You're now in "${sidebarGroupData.name}" sidebar group.
+    return `Great! You're now in "${sidebarGroupData.name}" sidebar group.
 
 You'll receive messages and can participate in this focused discussion! Check your group conversations for the new sidebar.`;
 
   } catch (error: any) {
     console.error("❌ Error joining sidebar group:", error);
-    return `❌ Failed to join sidebar group. Please contact support or try again later.`;
+    return `Failed to join sidebar group. Please contact support or try again later.`;
+  }
+}
+
+/**
+ * Resolve username and send welcome message asynchronously
+ */
+async function resolveAndSendWelcomeMessage(
+  sidebarGroup: any,
+  groupName: string,
+  userInboxId: string
+): Promise<void> {
+  try {
+    console.log(`🔍 Attempting to resolve Basename for inbox ID: ${userInboxId}`);
+    
+    // Get user's wallet address from XMTP
+    const inboxState = await sidebarClient!.preferences.inboxStateFromInboxIds([userInboxId]);
+    const walletAddress = inboxState[0]?.identifiers?.[0]?.identifier;
+    
+    let displayName = userInboxId;
+    
+    if (walletAddress) {
+      console.log(`💰 Found wallet address: ${walletAddress}`);
+      
+      try {
+        // Use OnchainKit to resolve wallet address to Basename
+        const basename = await getName({ address: walletAddress as `0x${string}`, chain: base });
+        
+        if (basename && basename !== walletAddress) {
+          displayName = `@${basename}`;
+          console.log(`✅ Resolved to Basename: ${displayName}`);
+        } else {
+          console.log(`⚠️ No Basename found for wallet: ${walletAddress}`);
+          // Try Farcaster as fallback
+          const userMap = await getUsersByAddresses([walletAddress]);
+          const user = userMap.get(walletAddress);
+          
+          if (user && user.username) {
+            displayName = `@${user.username}`;
+            console.log(`✅ Resolved to Farcaster username: ${displayName}`);
+          } else {
+            console.log(`⚠️ No Farcaster username found either`);
+            displayName = `user_${userInboxId.slice(0, 8)}`;
+          }
+        }
+      } catch (resolveError) {
+        console.log(`⚠️ Error resolving Basename:`, resolveError);
+        displayName = `user_${userInboxId.slice(0, 8)}`;
+      }
+    } else {
+      console.log(`⚠️ No wallet address found for inbox ID: ${userInboxId}`);
+      displayName = `user_${userInboxId.slice(0, 8)}`;
+    }
+
+    // Send welcome message with resolved username
+    await sidebarGroup.send(`${displayName} joined the "${groupName}" sidebar discussion!`);
+    console.log(`📤 Sent welcome message for ${displayName} in ${groupName}`);
+    
+  } catch (error) {
+    console.log(`⚠️ Error resolving username, using fallback:`, error);
+    // Send fallback message with shortened inbox ID
+    const fallbackName = `user_${userInboxId.slice(0, 8)}`;
+    await sidebarGroup.send(`${fallbackName} joined the "${groupName}" sidebar discussion!`);
   }
 }
 

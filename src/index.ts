@@ -250,16 +250,16 @@ async function handleMessage(message: DecodedMessage, client: Client) {
             // Ask if they want to add anyone with quick actions
             const addUsersActions: ActionsContent = {
               id: `add_users_${result.groupId}`,
-              description: `✅ Created "${result.groupName}"!\n\nWould you like to add anyone to this group?`,
+              description: `Created "${result.groupName}"!\n\nWould you like to add anyone to this group?`,
               actions: [
                 {
                   id: `add_yes_${result.groupId}`,
-                  label: "✅ Yes, add users",
+                  label: "Yes, add users",
                   style: "primary"
                 },
                 {
                   id: `add_no_${result.groupId}`,
-                  label: "❌ No thanks",
+                  label: "No thanks",
                   style: "secondary"
                 }
               ]
@@ -269,7 +269,7 @@ async function handleMessage(message: DecodedMessage, client: Client) {
             console.log(`📤 Sent add users quick action for group: ${result.groupId}`);
             return;
           } else {
-            await conversation.send("❌ Sorry, I couldn't create the group. Please try again.");
+            await conversation.send("Sorry, I couldn't create the group. Please try again.");
             return;
           }
         }
@@ -338,7 +338,7 @@ Respond with only "ADD_USERS" or "NO".`;
               return; // Exit early, mention handling completed
             } else {
               console.log(`⚠️ No recent group found for user ${senderInboxId}`);
-              await conversation.send(`❌ No recent group found. Please create a group first or make sure you're responding to a group creation message.`);
+              await conversation.send(`No recent group found. Please create a group first or make sure you're responding to a group creation message.`);
               return;
             }
           } else {
@@ -367,9 +367,9 @@ Respond with only "ADD_USERS" or "NO".`;
             timestamp: new Date()
           });
           
-          await conversation.send(`🎉 Perfect! I've created the "${groupResult.groupName}" group for you!\n\n✅ You're now a group admin\n✅ You can invite others to join\n✅ Start having focused discussions!\n\nThe group is ready to use. You can find it in your group conversations.`);
+          await conversation.send(`Perfect! I've created the "${groupResult.groupName}" group for you!\n\nYou're now a group admin\nYou can invite others to join\nStart having focused discussions!\n\nThe group is ready to use. You can find it in your group conversations.`);
         } else {
-          await conversation.send("❌ Sorry, I couldn't create the group. Please try again with a different name.");
+          await conversation.send("Sorry, I couldn't create the group. Please try again with a different name.");
           resetToIdle(senderInboxId);
         }
         return;
@@ -399,12 +399,12 @@ Respond with only "ADD_USERS" or "NO".`;
             actions: [
               {
                 id: `grouper_create_yes_${senderInboxId}`,
-                label: "✅ Yes, create group",
+                label: "Yes, create group",
                 style: "primary"
               },
               {
                 id: `grouper_create_no_${senderInboxId}`,
-                label: "❌ Not now",
+                label: "Not now",
                 style: "secondary"
               }
             ]
@@ -547,7 +547,7 @@ async function main() {
               // Reset conversation state
               resetToIdle(senderInboxId);
               
-              await conversation.send("No problem! Feel free to reach out anytime if you'd like to create a group. Just say 'hey' to get started! 👋");
+              await conversation.send("No problem! Feel free to reach out anytime if you'd like to create a group. Just say 'hey' to get started!");
               break;
             }
             

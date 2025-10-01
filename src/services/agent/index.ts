@@ -80,7 +80,7 @@ export class AIAgent {
 
 I help you create focused discussion groups instantly.
 
-🎯 To create a group, just say: "create [GroupName]"
+To create a group, just say: "create [GroupName]"
 
 Example: "create Marketing Team"`;
       }
