@@ -1,6 +1,6 @@
 import type { Client, DecodedMessage, Conversation } from "@xmtp/node-sdk";
 import { ContentTypeActions, type ActionsContent } from "../../../xmtp-inline-actions/types/ActionsContent.js";
-// import { resolveUsernamesToInboxIds } from "../../helpers/usernameResolver.js";
+import { resolveUsernamesToAddresses } from "../../helpers/neynarService.js";
 
 interface SidebarGroup {
   id: string;
@@ -23,15 +23,13 @@ export function setSidebarClient(client: Client<any>) {
 
 /**
  * Handle sidebar group creation request
- * Triggered by: "@thera sidebar this conversation GroupName" or "@thera sidebar GroupName"
+ * Triggered by: "@grouper create GroupName" or "@grouper sidebar GroupName"
  */
 export async function handleSidebarRequest(
   groupName: string,
   originalMessage: DecodedMessage,
   client: Client,
-  originalConversation: Conversation,
-  isDM: boolean = false,
-  isPrivateGroup: boolean = false
+  originalConversation: Conversation
 ): Promise<string> {
   try {
     if (!sidebarClient) {
@@ -104,63 +102,95 @@ export async function handleSidebarRequest(
     // Step 6: Pause briefly to ensure group is properly set up
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Step 7: Handle DM vs Group differently
-    if (isDM) {
-             // For DMs, ask for additional users instead of showing join action
-             const dmMessage = `✅ Created sidebar group "${groupName}"!
+    // Step 7: Send invitation quick actions to the group
+    const invitationActions: ActionsContent = {
+      id: `sidebar_invite_${sidebarGroup.id}`,
+      description: `🎯 "${groupName}" sidebar group created! Would you like to join this focused discussion?`,
+      actions: [
+        {
+          id: `join_sidebar_${sidebarGroup.id}`,
+          label: "✅ Yes, Join",
+          style: "primary"
+        },
+        {
+          id: `decline_sidebar_${sidebarGroup.id}`,
+          label: "❌ No Thanks",
+          style: "secondary"
+        }
+      ]
+    };
 
-Is there anyone you would like me to add? You can mention them like:
-@username1 @username2.eth @0x1234...
+    await (originalConversation as any).send(invitationActions, ContentTypeActions);
+    console.log(`📤 Sent sidebar group invitation to group conversation`);
 
-Just reply with the @mentions and I'll add those users to the group.`;
-      
-      await (originalConversation as any).send(dmMessage);
-      console.log(`📤 Sent DM response asking for additional users`);
-      
-      return ""; // Don't send a separate confirmation message
-    } else if (isPrivateGroup) {
-             // For private groups in groups, explain how to add users
-             const privateGroupMessage = `✅ Created private sidebar group "${groupName}"!
-
-To add users to this private group, reply with @mentions like:
-@spinny @username1 @username2.eth @0x1234...
-
-Note: Use usernames, ENS domains, or wallet addresses.`;
-      
-      await (originalConversation as any).send(privateGroupMessage);
-      console.log(`📤 Sent private group instructions to group conversation`);
-      
-      return ""; // Don't send a separate confirmation message
-    } else {
-      // For regular groups, send invitation quick actions
-      const invitationActions: ActionsContent = {
-        id: `sidebar_invite_${sidebarGroup.id}`,
-        description: `🎯 "${groupName}" sidebar group created! Would you like to join this focused discussion?`,
-        actions: [
-          {
-            id: `join_sidebar_${sidebarGroup.id}`,
-            label: "✅ Yes, Join",
-            style: "primary"
-          },
-          {
-            id: `decline_sidebar_${sidebarGroup.id}`,
-            label: "❌ No Thanks",
-            style: "secondary"
-          }
-        ]
-      };
-
-      // Send invitation to original group conversation
-      await (originalConversation as any).send(invitationActions, ContentTypeActions);
-      console.log(`📤 Sent sidebar group invitation to original group conversation`);
-
-      // Step 8: Return a simple confirmation (no additional message needed)
-      return ""; // Don't send a separate confirmation message
-    }
+    return ""; // Return empty string - quick actions were sent
 
   } catch (error: any) {
     console.error("❌ Error creating sidebar group:", error);
     return `❌ Failed to create sidebar group "${groupName}". Please try again later.\n\nError: ${error.message}`;
+  }
+}
+
+/**
+ * Create a sidebar group in DM context - returns the group ID
+ * This is used for the DM conversation flow
+ */
+export async function createSidebarGroupInDM(
+  groupName: string,
+  creatorInboxId: string
+): Promise<{ groupId: string; groupName: string } | null> {
+  try {
+    if (!sidebarClient) {
+      console.error("❌ Sidebar group system not initialized");
+      return null;
+    }
+
+    console.log(`🎯 Creating sidebar group "${groupName}" in DM for ${creatorInboxId}`);
+
+    // Create XMTP group with creator and agent as initial members
+    const sidebarGroup = await sidebarClient!.conversations.newGroup([creatorInboxId]);
+    
+    console.log(`✅ Created sidebar group: ${sidebarGroup.id}`);
+
+    // Set the group name
+    try {
+      await (sidebarGroup as any).updateName(groupName);
+      console.log(`✅ Set sidebar group name: "${groupName}"`);
+    } catch (nameError: any) {
+      console.log(`⚠️ Could not set group name: ${nameError.message}`);
+    }
+
+    // Store sidebar group metadata
+    const sidebarGroupData: SidebarGroup = {
+      id: sidebarGroup.id,
+      name: groupName,
+      originalGroupId: "dm_created",
+      createdBy: creatorInboxId,
+      createdAt: new Date(),
+      members: [creatorInboxId]
+    };
+    
+    sidebarGroups.set(sidebarGroup.id, sidebarGroupData);
+
+    // Make the creator a super admin
+    try {
+      await (sidebarGroup as any).addSuperAdmin(creatorInboxId);
+      console.log(`✅ Made ${creatorInboxId} a super admin`);
+    } catch (adminError: any) {
+      console.log(`⚠️ Could not make creator admin: ${adminError.message}`);
+    }
+
+    // Send welcome message
+    await sidebarGroup.send(`🎯 Welcome to "${groupName}"!\n\nYou created this group via DM. You're now a group admin and can manage this space for focused discussions.`);
+
+    return {
+      groupId: sidebarGroup.id,
+      groupName: groupName
+    };
+
+  } catch (error: any) {
+    console.error("❌ Error creating sidebar group in DM:", error);
+    return null;
   }
 }
 
@@ -292,28 +322,29 @@ export async function addUsersToSidebarGroup(
 
     // Check if we have any mentions
     if (mentions.length === 0) {
-      return `❌ No usernames found in your message. Please mention users like @username, @username.eth, or @0x1234...`;
+      return `❌ No usernames found in your message. Please mention users like @username`;
     }
 
-    // For now, we'll use the mentions directly as inbox IDs
-    // In the future, we'll implement proper username resolution
-    console.log(`🔍 Using mentions directly as inbox IDs (username resolution disabled)`);
+    // Resolve Farcaster usernames to wallet addresses using Neynar
+    console.log(`🔍 Resolving ${mentions.length} Farcaster usernames to wallet addresses...`);
     
-    const validInboxIds: string[] = [];
+    const usernameToAddress = await resolveUsernamesToAddresses(mentions);
+    
+    const validAddresses: string[] = [];
     const failedUsernames: string[] = [];
     
-    for (const mention of mentions) {
-      // Clean the mention (remove @ prefix)
-      const cleanMention = mention.replace(/^@/, '');
-      
-      // For now, just use the mention as-is
-      // In production, you'd resolve this to an actual inbox ID
-      validInboxIds.push(cleanMention);
-      console.log(`✅ Using mention as inbox ID: ${mention} -> ${cleanMention}`);
+    for (const [username, address] of usernameToAddress.entries()) {
+      if (address) {
+        validAddresses.push(address);
+        console.log(`✅ Resolved ${username} -> ${address}`);
+      } else {
+        failedUsernames.push(username);
+        console.log(`❌ Failed to resolve ${username}`);
+      }
     }
 
-    if (validInboxIds.length === 0) {
-      return `❌ No valid mentions found. Please mention users like @username or @0x1234...`;
+    if (validAddresses.length === 0) {
+      return `❌ Could not resolve any Farcaster usernames. Failed: ${failedUsernames.join(', ')}\n\nPlease make sure these are valid Farcaster usernames.`;
     }
 
     // Sync conversations to get latest state
@@ -331,30 +362,26 @@ export async function addUsersToSidebarGroup(
     const addedUsers: string[] = [];
     const failedUsers: string[] = [];
 
-    // Add each resolved user
-    console.log(`🚀 Adding ${validInboxIds.length} users to sidebar group`);
-    for (const userInboxId of validInboxIds) {
+    // Add each resolved user (by wallet address)
+    console.log(`🚀 Adding ${validAddresses.length} users to sidebar group`);
+    for (const userAddress of validAddresses) {
       try {
-        console.log(`\n🔍 === ADDING USER: ${userInboxId} ===`);
+        console.log(`\n🔍 === ADDING USER: ${userAddress} ===`);
         console.log(`📊 User details:`);
-        console.log(`   - Inbox ID: ${userInboxId}`);
-        console.log(`   - Inbox ID type: ${typeof userInboxId}`);
-        console.log(`   - Inbox ID length: ${userInboxId?.length || 'undefined'}`);
+        console.log(`   - Wallet Address: ${userAddress}`);
+        console.log(`   - Address type: ${typeof userAddress}`);
+        console.log(`   - Address length: ${userAddress?.length || 'undefined'}`);
         
-        // First, try to find the user in the original group conversation
-        // This helps with user discovery and validation
-        console.log(`🔍 Looking for user ${userInboxId} in group context`);
+        console.log(`🚀 Calling addMembers with: [${userAddress}]`);
+        await (sidebarGroup as any).addMembers([userAddress]);
         
-        console.log(`🚀 Calling addMembers with: [${userInboxId}]`);
-        await (sidebarGroup as any).addMembers([userInboxId]);
-        
-        addedUsers.push(userInboxId);
-        sidebarGroupData.members.push(userInboxId);
-        console.log(`✅ Successfully added ${userInboxId} to sidebar group`);
+        addedUsers.push(userAddress);
+        sidebarGroupData.members.push(userAddress);
+        console.log(`✅ Successfully added ${userAddress} to sidebar group`);
         console.log(`📊 Updated group members:`, sidebarGroupData.members);
         
       } catch (addError: any) {
-        console.log(`❌ Error adding ${userInboxId} to sidebar group: ${addError.message}`);
+        console.log(`❌ Error adding ${userAddress} to sidebar group: ${addError.message}`);
         console.log(`📋 Add error details:`, {
           message: addError.message,
           code: addError.code,
@@ -363,15 +390,15 @@ export async function addUsersToSidebarGroup(
         
         // Provide more helpful error messages
         if (addError.message?.includes('already') || addError.message?.includes('duplicate')) {
-          console.log(`ℹ️ User ${userInboxId} was already in sidebar group`);
+          console.log(`ℹ️ User ${userAddress} was already in sidebar group`);
           // Don't count as failed if they're already in the group
           continue;
         } else if (addError.message?.includes('Failed to verify all installations') || addError.code === 'GenericFailure') {
-          console.log(`⚠️ Installation verification failed for ${userInboxId} - temporary XMTP network issue`);
-          failedUsers.push(userInboxId);
+          console.log(`⚠️ Installation verification failed for ${userAddress} - temporary XMTP network issue`);
+          failedUsers.push(userAddress);
         } else {
-          console.log(`❌ Unknown error for ${userInboxId}:`, addError);
-          failedUsers.push(userInboxId);
+          console.log(`❌ Unknown error for ${userAddress}:`, addError);
+          failedUsers.push(userAddress);
         }
       }
     }
@@ -427,125 +454,42 @@ export function parseMentions(content: string): string[] {
 }
 
 /**
- * Parse spinny command from message content
- * Supports: "@spinny create GroupName", "@spinny make GroupName", "@spinny new GroupName", "@spinny sidebar GroupName"
- * Also supports: "@hey spinny.base.eth create GroupName"
+ * Parse grouper command from message content
+ * Supports: "@grouper create GroupName", "@grouper make GroupName", "@grouper new GroupName", "@grouper sidebar GroupName"
+ * Also supports: "@grouper.base.eth create GroupName"
  * Also supports cleaned content: "create GroupName", "make GroupName", "new GroupName", "sidebar GroupName"
- * Also supports direct DM commands: "create GroupName", "sidebar GroupName"
- * Also supports private groups: "@spinny create private GroupName"
  */
 export function parseSidebarCommand(content: string): string | null {
   if (!content || typeof content !== 'string') return null;
   
-  // Try @spinny create/make/new/sidebar patterns
-  let spinnyMatch = content.match(/@spinny\s+(?:create|make|new|sidebar)\s+(.+)/i);
-  if (spinnyMatch) {
-    return spinnyMatch[1].trim();
+  // Try @grouper create/make/new/sidebar patterns
+  let grouperMatch = content.match(/@grouper\s+(?:create|make|new|sidebar)\s+(.+)/i);
+  if (grouperMatch) {
+    return grouperMatch[1].trim();
   }
   
-  // Try @spinny.base.eth patterns
-  spinnyMatch = content.match(/@spinny\.base\.eth\s+(?:create|make|new|sidebar)\s+(.+)/i);
-  if (spinnyMatch) {
-    return spinnyMatch[1].trim();
+  // Try @grouper.base.eth patterns
+  grouperMatch = content.match(/@grouper\.base\.eth\s+(?:create|make|new|sidebar)\s+(.+)/i);
+  if (grouperMatch) {
+    return grouperMatch[1].trim();
   }
   
-  // Try cleaned content patterns (without @spinny prefix) - for groups
-  spinnyMatch = content.match(/^(?:create|make|new|sidebar)\s+(.+)/i);
-  if (spinnyMatch) {
-    return spinnyMatch[1].trim();
+  // Try cleaned content patterns (without @grouper prefix) - for groups
+  grouperMatch = content.match(/^(?:create|make|new|sidebar)\s+(.+)/i);
+  if (grouperMatch) {
+    return grouperMatch[1].trim();
   }
   
   // Try direct DM patterns - just "create" or "sidebar" at start
-  spinnyMatch = content.match(/^(?:create|sidebar)\s+(.+)/i);
-  if (spinnyMatch) {
-    return spinnyMatch[1].trim();
+  grouperMatch = content.match(/^(?:create|sidebar)\s+(.+)/i);
+  if (grouperMatch) {
+    return grouperMatch[1].trim();
   }
   
   return null;
 }
 
-/**
- * Check if a sidebar command is for a private group
- * Looks for "private" keyword in the command
- */
-export function isPrivateGroupCommand(content: string): boolean {
-  if (!content || typeof content !== 'string') return false;
-  
-  const normalizedContent = content.toLowerCase().trim();
-  
-  // Check for private keyword in various patterns
-  const privatePatterns = [
-    /@spinny\s+(?:create|make|new|sidebar)\s+private\s+/i,
-    /@spinny\.base\.eth\s+(?:create|make|new|sidebar)\s+private\s+/i,
-    /^(?:create|make|new|sidebar)\s+private\s+/i
-  ];
-  
-  return privatePatterns.some(pattern => pattern.test(normalizedContent));
-}
-
-/**
- * Extract group name from private group command (removes "private" keyword)
- */
-export function parsePrivateGroupCommand(content: string): string | null {
-  if (!content || typeof content !== 'string') return null;
-  
-  // Try @spinny create/make/new/sidebar private patterns
-  let spinnyMatch = content.match(/@spinny\s+(?:create|make|new|sidebar)\s+private\s+(.+)/i);
-  if (spinnyMatch) {
-    return spinnyMatch[1].trim();
-  }
-  
-  // Try @spinny.base.eth patterns
-  spinnyMatch = content.match(/@spinny\.base\.eth\s+(?:create|make|new|sidebar)\s+private\s+(.+)/i);
-  if (spinnyMatch) {
-    return spinnyMatch[1].trim();
-  }
-  
-  // Try cleaned content patterns (without @spinny prefix) - for groups
-  spinnyMatch = content.match(/^(?:create|make|new|sidebar)\s+private\s+(.+)/i);
-  if (spinnyMatch) {
-    return spinnyMatch[1].trim();
-  }
-  
-  return null;
-}
-
-/**
- * Extract group name and mentions from private group command with @mentions
- * Returns { groupName, mentions }
- */
-export function parsePrivateGroupCommandWithMentions(content: string): { groupName: string; mentions: string[] } | null {
-  if (!content || typeof content !== 'string') return null;
-  
-  // Try @spinny create/make/new/sidebar private patterns with @mentions
-  let spinnyMatch = content.match(/@spinny\s+(?:create|make|new|sidebar)\s+private\s+(.+)/i);
-  if (spinnyMatch) {
-    const fullContent = spinnyMatch[1].trim();
-    const mentions = parseMentions(fullContent);
-    const groupName = fullContent.replace(/@\w+/g, '').trim();
-    return { groupName, mentions };
-  }
-  
-  // Try @spinny.base.eth patterns with @mentions
-  spinnyMatch = content.match(/@spinny\.base\.eth\s+(?:create|make|new|sidebar)\s+private\s+(.+)/i);
-  if (spinnyMatch) {
-    const fullContent = spinnyMatch[1].trim();
-    const mentions = parseMentions(fullContent);
-    const groupName = fullContent.replace(/@\w+/g, '').trim();
-    return { groupName, mentions };
-  }
-  
-  // Try cleaned content patterns (without @spinny prefix) - for groups
-  spinnyMatch = content.match(/^(?:create|make|new|sidebar)\s+private\s+(.+)/i);
-  if (spinnyMatch) {
-    const fullContent = spinnyMatch[1].trim();
-    const mentions = parseMentions(fullContent);
-    const groupName = fullContent.replace(/@\w+/g, '').trim();
-    return { groupName, mentions };
-  }
-  
-  return null;
-}
+// Private group functions removed - DM handles all conversational flows now
 
 /**
  * Check if message is a sidebar creation request
@@ -555,10 +499,10 @@ export function isSidebarRequest(content: string): boolean {
   
   const normalizedContent = content.toLowerCase().trim();
   
-  // Check for @spinny create/make/new/sidebar patterns (original content)
+  // Check for @grouper create/make/new/sidebar patterns (original content)
   const originalPatterns = [
-    /@spinny\s+(create|make|new|sidebar)\s+.+/i,
-    /@spinny\.base\.eth\s+(create|make|new|sidebar)\s+.+/i
+    /@grouper\s+(create|make|new|sidebar)\s+.+/i,
+    /@grouper\.base\.eth\s+(create|make|new|sidebar)\s+.+/i
   ];
   
   // Check for cleaned content patterns (after mention removal)
@@ -566,20 +510,7 @@ export function isSidebarRequest(content: string): boolean {
     /^(create|make|new|sidebar)\s+.+/i
   ];
   
-  // Check for direct DM patterns (just "create" or "sidebar" at start)
-  const dmPatterns = [
-    /^create\s+.+/i,
-    /^sidebar\s+.+/i
-  ];
-  
-  // Check for private group patterns
-  const privatePatterns = [
-    /@spinny\s+(create|make|new|sidebar)\s+private\s+.+/i,
-    /@spinny\.base\.eth\s+(create|make|new|sidebar)\s+private\s+.+/i,
-    /^(create|make|new|sidebar)\s+private\s+.+/i
-  ];
-  
-  const allPatterns = [...originalPatterns, ...cleanedPatterns, ...dmPatterns, ...privatePatterns];
+  const allPatterns = [...originalPatterns, ...cleanedPatterns];
   
   return allPatterns.some(pattern => pattern.test(normalizedContent));
 }
@@ -628,14 +559,12 @@ export function cleanupExpiredInvitations(maxAgeHours: number = 24): void {
 
 export default {
   handleSidebarRequest,
+  createSidebarGroupInDM,
   joinSidebarGroup,
   declineSidebarGroup,
   addUsersToSidebarGroup,
   parseMentions,
   parseSidebarCommand,
-  parsePrivateGroupCommand,
-  parsePrivateGroupCommandWithMentions,
-  isPrivateGroupCommand,
   isSidebarRequest,
   getSidebarGroupInfo,
   getSidebarGroupById,

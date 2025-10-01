@@ -6,7 +6,7 @@ export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 export const DEFAULT_MODEL = process.env.DEFAULT_MODEL;
 
 // Configurable settings
-export const MENTION_HANDLES = process.env.MENTION_HANDLES || "spinny, spinny.base.eth";
+export const MENTION_HANDLES = process.env.MENTION_HANDLES || "grouper, grouper.base.eth";
 export const DEBUG_LOGS = process.env.DEBUG_LOGS === "true" && process.env.NODE_ENV !== "production";
 export const SHOW_SENDER_ADDRESS = process.env.SHOW_SENDER_ADDRESS === "true";
 

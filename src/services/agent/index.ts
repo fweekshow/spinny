@@ -76,59 +76,48 @@ export class AIAgent {
       console.log(`🤖 Simple response for: "${query}"`);
       
       if (query.toLowerCase().includes('hey') || query.toLowerCase().includes('hi') || query.toLowerCase().includes('hello')) {
-        return `Hi! I'm Spinny, your Group Creation Assistant. 
+        return `Hi! I'm Grouper, your Group Creation Assistant. 
 
 I help you create focused discussion groups instantly. Here's how to get started:
 
-🎯 Create a Group: "@spinny create [GroupName]"
+🎯 Create a Group: "@grouper create [GroupName]"
 📋 Manage Groups: Get info and help with group administration
 
-Just mention me with @spinny and tell me what group you'd like to create!`;
+Just mention me with @grouper and tell me what group you'd like to create!`;
       }
 
       if (query.toLowerCase().includes('help')) {
-        return `## Spinny Group Creation Assistant - Help
+        return `## Grouper - Group Creation Assistant
 
 ### Available Commands:
 
-Group Creation:
-- @spinny create [GroupName] - Create a new group instantly
-- @spinny make [GroupName] - Alternative syntax for group creation
-- @spinny new [GroupName] - Another way to create groups
-
-Private Groups (Groups Only):
-- @spinny create private [GroupName] - Create a private group (no quick actions)
-- @spinny make private [GroupName] - Alternative syntax for private groups
-- @spinny new private [GroupName] - Another way to create private groups
-- @spinny create private [GroupName] @username1 @username2 - Create private group and add users immediately
+Group Creation (in group chats):
+- @grouper create [GroupName] - Create a new group instantly
+- @grouper make [GroupName] - Alternative syntax for group creation
+- @grouper new [GroupName] - Another way to create groups
 
 Examples:
-- "@spinny create Project Discussion" (shows join quick actions)
-- "@spinny create private Marketing Team" (asks for @mentions to add users)
-- "@spinny create private Leadership Team @username1 @username2.eth" (creates group and adds users)
-- "@spinny make private Finance Group" (private group creation)
+- "@grouper create Project Discussion" (shows quick actions to join)
+- "@grouper make Marketing Team" (creates group with join buttons)
 
-Note: Use usernames, ENS domains, or wallet addresses for @mentions (e.g., @username, @username.eth, @0x1234...).
-
-Note: Private groups can only be created in group conversations, not in DMs.
+DM Group Creation:
+- Message me in DM and I'll guide you through creating a group step by step
+- I'll ask for the group name and who to add
 
 Features:
 - Instant Group Creation - Groups are created immediately
-- Public Groups - Show quick action buttons for easy joining
-- Private Groups - Ask for @mentions to add specific users
-- Member Management - Add multiple members with @mentions or quick actions
+- Quick Actions - Interactive buttons for easy joining
+- Member Management - Add members via quick actions or @mentions
 - Focused Discussions - Organized, topic-specific conversations
 
 Need help with something specific? Just ask!`;
       }
 
-      return `I'm Spinny, your Group Creation Assistant! I help create focused discussion groups instantly.
+      return `I'm Grouper, your Group Creation Assistant! I help create focused discussion groups instantly.
 
-To create a group, just say: "@spinny create [GroupName]"
-For private groups (groups only): "@spinny create private [GroupName]"
-For private groups with users: "@spinny create private [GroupName] @username1 @username2"
+To create a group, just say: "@grouper create [GroupName]"
 
-For help, say: "help" or "@spinny help"`;
+For help, say: "help" or "@grouper help"`;
       
     } catch (e) {
       console.log(`⚠️ Unable to generate result: ${e}`);

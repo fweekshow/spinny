@@ -8,10 +8,8 @@ import {
   addUsersToSidebarGroup,
   parseMentions,
   parseSidebarCommand,
-  parsePrivateGroupCommand,
-  parsePrivateGroupCommandWithMentions,
-  isPrivateGroupCommand,
   isSidebarRequest,
+  createSidebarGroupInDM,
   getSidebarGroupInfo,
   listSidebarGroups,
   setSidebarClient
@@ -220,79 +218,18 @@ async function handleMessage(message: DecodedMessage, client: Client) {
     try {
       console.log(`🤖 Processing message: "${cleanContent}"`);
       
-      // Check for sidebar group creation requests
-      // In groups: requires @spinny mention
-      // In DMs: can use direct commands like "create Marketing team" or "sidebar Marketing team"
-      if (isSidebarRequest(cleanContent) || (!isGroup && (cleanContent.toLowerCase().startsWith('create ') || cleanContent.toLowerCase().startsWith('sidebar ')))) {
-        // Check if this is a private group command (only allowed in groups)
-        if (isPrivateGroupCommand(cleanContent)) {
-          if (isGroup) {
-            // Check if the command includes @mentions
-            const privateGroupWithMentions = parsePrivateGroupCommandWithMentions(cleanContent);
-            if (privateGroupWithMentions && privateGroupWithMentions.mentions.length > 0) {
-              // Private group with @mentions - create group and add users immediately
-              const { groupName, mentions } = privateGroupWithMentions;
-              console.log(`🎯 Processing private sidebar group request with @mentions: "${groupName}" - ${mentions.join(', ')}`);
-              
-              // Create the group
-              const sidebarResponse = await handleSidebarRequest(groupName, message, client, conversation, false, true);
-              
-              // Add the mentioned users
-              if (sidebarResponse === "") {
-                // Group was created successfully, now add users
-                const allGroups = listSidebarGroups();
-                const userGroups = allGroups.filter((group: any) => group.createdBy === senderInboxId);
-                if (userGroups.length > 0) {
-                  const recentGroup = userGroups.sort((a: any, b: any) => b.createdAt.getTime() - a.createdAt.getTime())[0];
-                  console.log(`🎯 Adding users to private group: ${recentGroup.id}`);
-                  const addResult = await addUsersToSidebarGroup(recentGroup.id, mentions, senderInboxId);
-                  await conversation.send(addResult);
-                  addToConversationHistory(senderInboxId, cleanContent, addResult);
-                }
-              } else {
-                await conversation.send(sidebarResponse);
-                addToConversationHistory(senderInboxId, cleanContent, sidebarResponse);
-              }
-              return; // Exit early, private group with mentions handled
-            } else {
-              // Private group without @mentions - show quick action
-              const groupName = parsePrivateGroupCommand(cleanContent);
-              if (groupName) {
-                console.log(`🎯 Processing private sidebar group request: "${groupName}"`);
-                // For private groups in groups, show quick action
-                const sidebarResponse = await handleSidebarRequest(groupName, message, client, conversation, false, true);
-                if (sidebarResponse && sidebarResponse.trim() !== "") {
-                  await conversation.send(sidebarResponse);
-                  addToConversationHistory(senderInboxId, cleanContent, sidebarResponse);
-                } else {
-                  // Even if sidebarResponse is empty, we need to add the expected response to history
-                  const expectedResponse = `✅ Created private sidebar group "${groupName}"!
-
-To add users to this private group, reply with @mentions like:
-@spinny @address1 @address2 @address3
-
-Note: Use XMTP addresses (long hex strings), not usernames.`;
-                  addToConversationHistory(senderInboxId, cleanContent, expectedResponse);
-                }
-                return; // Exit early, private group request handled
-              }
-            }
-          } else {
-            // Private groups not allowed in DMs
-            await conversation.send("❌ Private groups can only be created in group conversations. Use regular group creation in DMs.");
-            return;
+      // Check for sidebar group creation requests (GROUPS ONLY)
+      // Groups: requires @grouper mention and shows quick actions
+      // DMs: handle via conversational flow (see below)
+      if (isGroup && isSidebarRequest(cleanContent)) {
+        const groupName = parseSidebarCommand(cleanContent);
+        if (groupName) {
+          console.log(`🎯 Processing sidebar group request in GROUP: "${groupName}"`);
+          const sidebarResponse = await handleSidebarRequest(groupName, message, client, conversation);
+          if (sidebarResponse && sidebarResponse.trim() !== "") {
+            await conversation.send(sidebarResponse);
           }
-        } else {
-          // Regular group creation
-          const groupName = parseSidebarCommand(cleanContent);
-          if (groupName) {
-            console.log(`🎯 Processing sidebar group request: "${groupName}"`);
-            const sidebarResponse = await handleSidebarRequest(groupName, message, client, conversation, !isGroup);
-            if (sidebarResponse && sidebarResponse.trim() !== "") {
-              await conversation.send(sidebarResponse);
-            }
-            return; // Exit early, sidebar request handled
-          }
+          return; // Exit early, sidebar request handled
         }
       }
 
