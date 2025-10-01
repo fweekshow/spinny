@@ -76,13 +76,9 @@ export class AIAgent {
       console.log(`🤖 Simple response for: "${query}"`);
       
       if (query.toLowerCase().includes('hey') || query.toLowerCase().includes('hi') || query.toLowerCase().includes('hello')) {
-        return `Hi! I'm Grouper, your Group Creation Assistant. 
+        return `Hi! I'm Grouper, your Group Management assistant. I can help you create focused groups & sidebar conversations instantly.
 
-I help you create focused discussion groups instantly.
-
-To create a group, just say: "create [GroupName]"
-
-Example: "create Marketing Team"`;
+To create a group, just say: "@grouper sidebar [Group Name]"`;
       }
 
       if (query.toLowerCase().includes('help')) {
