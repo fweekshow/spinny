@@ -49,7 +49,7 @@ if (!XMTP_ENV) {
 const signer = createSigner(WALLET_KEY);
 const encryptionKey = getEncryptionKeyFromHex(DB_ENCRYPTION_KEY);
 
-console.log(`🚀 Starting Spinny Agent...`);
+console.log(`🚀 Starting Grouper Agent...`);
 
 // Initialize databases
 initDb(); // SQLite for backwards compatibility
@@ -359,7 +359,7 @@ async function main() {
     console.log(`📅 Agent Context: Today is ${now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`);
     
     console.log("🔄 Initializing client...");
-    const dbPath = getDbPath("spinny-agent");
+    const dbPath = getDbPath("grouper-agent");
     console.log("🔄 DB path:", dbPath);
     const client = await Client.create(signer, {
       dbEncryptionKey: encryptionKey,
@@ -369,7 +369,7 @@ async function main() {
     });
     
     // Register codecs for Quick Actions
-    console.log("🔄 Spinny client initialized with Quick Actions codecs");
+    console.log("🔄 Grouper client initialized with Quick Actions codecs");
     await logAgentDetails(client);
     
     // Initialize sidebar client for sidebar groups
