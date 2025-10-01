@@ -80,34 +80,32 @@ export class AIAgent {
 
 I help you create focused discussion groups instantly. Here's how to get started:
 
-🎯 Create a Group: "@grouper create [GroupName]"
-📋 Manage Groups: Get info and help with group administration
+🎯 Create a Group: Just say "create [GroupName]"
+📋 Get Help: Type "help" to see all commands
 
-Just mention me with @grouper and tell me what group you'd like to create!`;
+Let me know what group you'd like to create!`;
       }
 
       if (query.toLowerCase().includes('help')) {
         return `## Grouper - Group Creation Assistant
 
-### Available Commands:
-
-Group Creation (in group chats):
+### Commands for Group Chats:
 - @grouper create [GroupName] - Create a new group instantly
-- @grouper make [GroupName] - Alternative syntax for group creation
-- @grouper new [GroupName] - Another way to create groups
+- @grouper make [GroupName] - Alternative syntax
+- @grouper new [GroupName] - Another way to create
 
-Examples:
-- "@grouper create Project Discussion" (shows quick actions to join)
-- "@grouper make Marketing Team" (creates group with join buttons)
+Example: "@grouper create Project Discussion" (shows quick actions to join)
 
-DM Group Creation:
-- Message me in DM and I'll guide you through creating a group step by step
-- I'll ask for the group name and who to add
+### Commands for DMs:
+- create [GroupName] - Create a new group (no @ needed!)
+- I'll guide you through adding members step by step
 
-Features:
+Example: "create Marketing Team"
+
+### Features:
 - Instant Group Creation - Groups are created immediately
 - Quick Actions - Interactive buttons for easy joining
-- Member Management - Add members via quick actions or @mentions
+- Member Management - Add members via @mentions or quick actions
 - Focused Discussions - Organized, topic-specific conversations
 
 Need help with something specific? Just ask!`;
@@ -115,9 +113,9 @@ Need help with something specific? Just ask!`;
 
       return `I'm Grouper, your Group Creation Assistant! I help create focused discussion groups instantly.
 
-To create a group, just say: "@grouper create [GroupName]"
+To create a group, just say: "create [GroupName]"
 
-For help, say: "help" or "@grouper help"`;
+For help, type: "help"`;
       
     } catch (e) {
       console.log(`⚠️ Unable to generate result: ${e}`);
