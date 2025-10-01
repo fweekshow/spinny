@@ -49,7 +49,7 @@ if (!XMTP_ENV) {
 const signer = createSigner(WALLET_KEY);
 const encryptionKey = getEncryptionKeyFromHex(DB_ENCRYPTION_KEY);
 
-console.log(`🚀 Starting Grouper Agent...`);
+console.log(`🚀 Starting Grouper Agent v1.0.1...`);
 
 // Initialize databases
 initDb(); // SQLite for backwards compatibility
