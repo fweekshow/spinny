@@ -68,8 +68,12 @@ export const getEncryptionKeyFromHex = (hex: string) => {
 };
 
 export const getDbPath = (description: string = "xmtp") => {
-  //Checks if the environment is a Railway deployment
-  const volumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH ?? ".data/xmtp";
+  // Use separate directories for Railway (production) vs local development
+  const isRailway = !!process.env.RAILWAY_ENVIRONMENT;
+  const volumePath = isRailway 
+    ? (process.env.RAILWAY_VOLUME_MOUNT_PATH ?? ".data/xmtp")
+    : ".data-local/xmtp"; // Separate local directory to avoid conflicts
+  
   // Create database directory if it doesn't exist
   if (!fs.existsSync(volumePath)) {
     fs.mkdirSync(volumePath, { recursive: true });

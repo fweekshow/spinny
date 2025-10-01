@@ -78,12 +78,11 @@ export class AIAgent {
       if (query.toLowerCase().includes('hey') || query.toLowerCase().includes('hi') || query.toLowerCase().includes('hello')) {
         return `Hi! I'm Grouper, your Group Creation Assistant. 
 
-I help you create focused discussion groups instantly. Here's how to get started:
+I help you create focused discussion groups instantly.
 
-🎯 Create a Group: Just say "create [GroupName]"
-📋 Get Help: Type "help" to see all commands
+🎯 To create a group, just say: "create [GroupName]"
 
-Let me know what group you'd like to create!`;
+Example: "create Marketing Team"`;
       }
 
       if (query.toLowerCase().includes('help')) {

@@ -118,4 +118,5 @@ Thumbs.db
 .railway/
 
 # Local data directory
-.data/
+.data
+.data-local/

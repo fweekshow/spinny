@@ -108,12 +108,12 @@ export async function handleSidebarRequest(
       description: `🎯 "${groupName}" sidebar group created! Would you like to join this focused discussion?`,
       actions: [
         {
-          id: `join_sidebar_${sidebarGroup.id}`,
+          id: `grouper_join_sidebar_${sidebarGroup.id}`,
           label: "✅ Yes, Join",
           style: "primary"
         },
         {
-          id: `decline_sidebar_${sidebarGroup.id}`,
+          id: `grouper_decline_sidebar_${sidebarGroup.id}`,
           label: "❌ No Thanks",
           style: "secondary"
         }

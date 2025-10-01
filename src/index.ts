@@ -2,6 +2,13 @@ import { Client, type Signer, type DecodedMessage, Group } from "@xmtp/node-sdk"
 import { isMentioned, removeMention } from "./mentions.js";
 import { AIAgent } from "./services/agent/index.js";
 import { 
+  DMConversationStep, 
+  setDMState, 
+  getDMState, 
+  resetToIdle,
+  clearDMState 
+} from "./dmConversationState.js";
+import { 
   handleSidebarRequest, 
   joinSidebarGroup, 
   declineSidebarGroup,
@@ -218,10 +225,9 @@ async function handleMessage(message: DecodedMessage, client: Client) {
     try {
       console.log(`🤖 Processing message: "${cleanContent}"`);
       
-      // Check for sidebar group creation requests (GROUPS ONLY)
-      // Groups: requires @grouper mention and shows quick actions
-      // DMs: handle via conversational flow (see below)
+      // Check for sidebar group creation requests
       if (isGroup && isSidebarRequest(cleanContent)) {
+        // GROUPS: requires @grouper mention and shows quick actions
         const groupName = parseSidebarCommand(cleanContent);
         if (groupName) {
           console.log(`🎯 Processing sidebar group request in GROUP: "${groupName}"`);
@@ -230,6 +236,42 @@ async function handleMessage(message: DecodedMessage, client: Client) {
             await conversation.send(sidebarResponse);
           }
           return; // Exit early, sidebar request handled
+        }
+      } else if (!isGroup && (isSidebarRequest(cleanContent) || cleanContent.toLowerCase().match(/^(create|sidebar|make|new)\s+(.+)/i))) {
+        // DMS: Direct group creation commands
+        const groupName = parseSidebarCommand(cleanContent);
+        if (groupName) {
+          console.log(`🎯 Processing sidebar group request in DM: "${groupName}"`);
+          
+          // Create the group via DM
+          const result = await createSidebarGroupInDM(groupName, senderInboxId);
+          
+          if (result) {
+            // Ask if they want to add anyone with quick actions
+            const addUsersActions: ActionsContent = {
+              id: `add_users_${result.groupId}`,
+              description: `✅ Created "${result.groupName}"!\n\nWould you like to add anyone to this group?`,
+              actions: [
+                {
+                  id: `add_yes_${result.groupId}`,
+                  label: "✅ Yes, add users",
+                  style: "primary"
+                },
+                {
+                  id: `add_no_${result.groupId}`,
+                  label: "❌ No thanks",
+                  style: "secondary"
+                }
+              ]
+            };
+            
+            await (conversation as any).send(addUsersActions, ContentTypeActions);
+            console.log(`📤 Sent add users quick action for group: ${result.groupId}`);
+            return;
+          } else {
+            await conversation.send("❌ Sorry, I couldn't create the group. Please try again.");
+            return;
+          }
         }
       }
 
@@ -305,6 +347,34 @@ Respond with only "ADD_USERS" or "NO".`;
         }
       }
       
+      // Check conversation state for DM flow
+      const dmState = getDMState(senderInboxId);
+      
+      // Handle group name collection flow in DMs
+      if (!isGroup && dmState.step === DMConversationStep.WAITING_FOR_GROUP_NAME) {
+        const groupName = cleanContent.trim();
+        console.log(`🎯 User provided group name: "${groupName}"`);
+        
+        // Create the sidebar group
+        const groupResult = await createSidebarGroupInDM(groupName, senderInboxId);
+        
+        if (groupResult) {
+          // Update conversation state
+          setDMState(senderInboxId, {
+            step: DMConversationStep.IDLE,
+            groupName: groupResult.groupName,
+            groupId: groupResult.groupId,
+            timestamp: new Date()
+          });
+          
+          await conversation.send(`🎉 Perfect! I've created the "${groupResult.groupName}" group for you!\n\n✅ You're now a group admin\n✅ You can invite others to join\n✅ Start having focused discussions!\n\nThe group is ready to use. You can find it in your group conversations.`);
+        } else {
+          await conversation.send("❌ Sorry, I couldn't create the group. Please try again with a different name.");
+          resetToIdle(senderInboxId);
+        }
+        return;
+      }
+      
       // Get conversation context for this user
       const conversationContext = getConversationContext(senderInboxId);
       const messageWithContext = conversationContext + cleanContent;
@@ -320,8 +390,33 @@ Respond with only "ADD_USERS" or "NO".`;
 
       if (response) {
         console.log(`🔍 AI Response: "${response}"`);
-        await conversation.send(response);
-        addToConversationHistory(senderInboxId, cleanContent, response);
+        
+        // Check if this is a greeting in a DM - send quick actions instead
+        if (!isGroup && (cleanContent.toLowerCase().includes('hey') || cleanContent.toLowerCase().includes('hi') || cleanContent.toLowerCase().includes('hello'))) {
+          const welcomeActions: ActionsContent = {
+            id: `grouper_welcome_${senderInboxId}_${Date.now()}`,
+            description: `Hi! I'm Grouper, your Group Management Assistant.\n\nWould you like to create a group?`,
+            actions: [
+              {
+                id: `grouper_create_yes_${senderInboxId}`,
+                label: "✅ Yes, create group",
+                style: "primary"
+              },
+              {
+                id: `grouper_create_no_${senderInboxId}`,
+                label: "❌ Not now",
+                style: "secondary"
+              }
+            ]
+          };
+          
+          await (conversation as any).send(welcomeActions, ContentTypeActions);
+          console.log(`📤 Sent welcome quick action to DM`);
+          addToConversationHistory(senderInboxId, cleanContent, "Sent welcome quick actions");
+        } else {
+          await conversation.send(response);
+          addToConversationHistory(senderInboxId, cleanContent, response);
+        }
       }
     } catch (error) {
       console.error("❌ Error generating or sending response:", error);
@@ -429,17 +524,44 @@ async function main() {
         // Handle different action IDs
         switch (actionId) {
           default:
+            // Handle grouper_create_yes action for group creation flow
+            if (actionId.startsWith('grouper_create_yes_')) {
+              const senderInboxId = actionId.replace('grouper_create_yes_', '');
+              console.log(`🎯 User wants to create a group: ${senderInboxId}`);
+              
+              // Set conversation state to waiting for group name
+              setDMState(senderInboxId, {
+                step: DMConversationStep.WAITING_FOR_GROUP_NAME,
+                timestamp: new Date()
+              });
+              
+              await conversation.send("Great! What would you like to name the group?");
+              break;
+            }
+            
+            // Handle grouper_create_no action 
+            if (actionId.startsWith('grouper_create_no_')) {
+              const senderInboxId = actionId.replace('grouper_create_no_', '');
+              console.log(`🎯 User declined to create a group: ${senderInboxId}`);
+              
+              // Reset conversation state
+              resetToIdle(senderInboxId);
+              
+              await conversation.send("No problem! Feel free to reach out anytime if you'd like to create a group. Just say 'hey' to get started! 👋");
+              break;
+            }
+            
             // Handle sidebar group actions with dynamic IDs
-            if (actionId.startsWith('join_sidebar_')) {
-              const groupId = actionId.replace('join_sidebar_', '');
+            if (actionId.startsWith('grouper_join_sidebar_')) {
+              const groupId = actionId.replace('grouper_join_sidebar_', '');
               console.log(`🎯 User joining sidebar group: ${groupId}`);
               const joinResult = await joinSidebarGroup(groupId, message.senderInboxId);
               await conversation.send(joinResult);
               break;
             }
             
-            if (actionId.startsWith('decline_sidebar_')) {
-              const groupId = actionId.replace('decline_sidebar_', '');
+            if (actionId.startsWith('grouper_decline_sidebar_')) {
+              const groupId = actionId.replace('grouper_decline_sidebar_', '');
               console.log(`🎯 User declining sidebar group: ${groupId}`);
               const declineResult = await declineSidebarGroup(groupId, message.senderInboxId);
               await conversation.send(declineResult);
