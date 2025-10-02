@@ -18,9 +18,14 @@ const sidebarGroups = new Map<string, SidebarGroup>();
 const pendingInvitations = new Map<string, { groupId: string; originalGroupId: string }>();
 
 let sidebarClient: Client<any> | null = null;
+let agentId: string = "grouper"; // Default ID
 
-export function setSidebarClient(client: Client<any>) {
+export function setSidebarClient(client: Client<any>, id?: string) {
   sidebarClient = client;
+  if (id) {
+    agentId = id;
+    console.log(`🤖 Sidebar client initialized with agent ID: ${agentId}`);
+  }
 }
 
 /**
@@ -110,12 +115,12 @@ export async function handleSidebarRequest(
       description: `"${groupName}" sidebar group created! Would you like to join this focused discussion?`,
       actions: [
         {
-          id: `grouper_join_sidebar_${sidebarGroup.id}`,
+          id: `${agentId}_join_sidebar_${sidebarGroup.id}`,
           label: "Yes, Join",
           style: "primary"
         },
         {
-          id: `grouper_decline_sidebar_${sidebarGroup.id}`,
+          id: `${agentId}_decline_sidebar_${sidebarGroup.id}`,
           label: "No Thanks",
           style: "secondary"
         }

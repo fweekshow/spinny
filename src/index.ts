@@ -45,6 +45,9 @@ if (!WALLET_KEY) {
   throw new Error("WALLET_KEY is required");
 }
 
+// Generate unique agent ID for this instance to avoid conflicts with other agents
+const AGENT_ID = `rocky_${WALLET_KEY.slice(2, 10)}`;
+
 if (!DB_ENCRYPTION_KEY) {
   throw new Error("DB_ENCRYPTION_KEY is required");
 }
@@ -394,16 +397,16 @@ Respond with only "ADD_USERS" or "NO".`;
         // Check if this is a greeting in a DM - send quick actions instead
         if (!isGroup && (cleanContent.toLowerCase().includes('hey') || cleanContent.toLowerCase().includes('hi') || cleanContent.toLowerCase().includes('hello'))) {
           const welcomeActions: ActionsContent = {
-            id: `grouper_welcome_${senderInboxId}_${Date.now()}`,
+            id: `${AGENT_ID}_welcome_${senderInboxId}_${Date.now()}`,
             description: `Hi! I'm Grouper, your Group Management Assistant.\n\nWould you like to create a group?`,
             actions: [
               {
-                id: `grouper_create_yes_${senderInboxId}`,
+                id: `${AGENT_ID}_create_yes_${senderInboxId}`,
                 label: "Yes, create group",
                 style: "primary"
               },
               {
-                id: `grouper_create_no_${senderInboxId}`,
+                id: `${AGENT_ID}_create_no_${senderInboxId}`,
                 label: "Not now",
                 style: "secondary"
               }
@@ -467,8 +470,8 @@ async function main() {
     console.log("🔄 Grouper client initialized with Quick Actions codecs");
     await logAgentDetails(client);
     
-    // Initialize sidebar client for sidebar groups
-    setSidebarClient(client);
+    // Initialize sidebar client for sidebar groups with unique agent ID
+    setSidebarClient(client, AGENT_ID);
     
     // Handle process termination
     const cleanup = () => {
@@ -517,6 +520,12 @@ async function main() {
         console.log(`🎯 Received Quick Action intent: ${actionId}`);
         console.log(`🎯 Full intent content:`, JSON.stringify(intentContent, null, 2));
         
+        // Only respond to actions intended for this agent
+        if (!actionId.startsWith(AGENT_ID)) {
+          console.log(`⏭️ Ignoring action from different agent (not ${AGENT_ID})`);
+          continue;
+        }
+        
         // Get conversation to respond
         const conversation = await client.conversations.getConversationById(message.conversationId);
         if (!conversation) continue;
@@ -524,9 +533,9 @@ async function main() {
         // Handle different action IDs
         switch (actionId) {
           default:
-            // Handle grouper_create_yes action for group creation flow
-            if (actionId.startsWith('grouper_create_yes_')) {
-              const senderInboxId = actionId.replace('grouper_create_yes_', '');
+            // Handle create_yes action for group creation flow
+            if (actionId.startsWith(`${AGENT_ID}_create_yes_`)) {
+              const senderInboxId = actionId.replace(`${AGENT_ID}_create_yes_`, '');
               console.log(`🎯 User wants to create a group: ${senderInboxId}`);
               
               // Set conversation state to waiting for group name
@@ -539,9 +548,9 @@ async function main() {
               break;
             }
             
-            // Handle grouper_create_no action 
-            if (actionId.startsWith('grouper_create_no_')) {
-              const senderInboxId = actionId.replace('grouper_create_no_', '');
+            // Handle create_no action 
+            if (actionId.startsWith(`${AGENT_ID}_create_no_`)) {
+              const senderInboxId = actionId.replace(`${AGENT_ID}_create_no_`, '');
               console.log(`🎯 User declined to create a group: ${senderInboxId}`);
               
               // Reset conversation state
@@ -552,16 +561,16 @@ async function main() {
             }
             
             // Handle sidebar group actions with dynamic IDs
-            if (actionId.startsWith('grouper_join_sidebar_')) {
-              const groupId = actionId.replace('grouper_join_sidebar_', '');
+            if (actionId.startsWith(`${AGENT_ID}_join_sidebar_`)) {
+              const groupId = actionId.replace(`${AGENT_ID}_join_sidebar_`, '');
               console.log(`🎯 User joining sidebar group: ${groupId}`);
               const joinResult = await joinSidebarGroup(groupId, message.senderInboxId);
               await conversation.send(joinResult);
               break;
             }
             
-            if (actionId.startsWith('grouper_decline_sidebar_')) {
-              const groupId = actionId.replace('grouper_decline_sidebar_', '');
+            if (actionId.startsWith(`${AGENT_ID}_decline_sidebar_`)) {
+              const groupId = actionId.replace(`${AGENT_ID}_decline_sidebar_`, '');
               console.log(`🎯 User declining sidebar group: ${groupId}`);
               const declineResult = await declineSidebarGroup(groupId, message.senderInboxId);
               await conversation.send(declineResult);
